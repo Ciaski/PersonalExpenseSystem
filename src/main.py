@@ -4,7 +4,8 @@ def inizializza_db():
     conn = sqlite3.connect('Spese_Personali.db')
     cursor = conn.cursor()
     cursor.execute("PRAGMA foreign_keys = ON;")
-       cursor.execute('''CREATE TABLE IF NOT EXISTS categorie (
+    # Ho allineato correttamente le righe qui sotto
+    cursor.execute('''CREATE TABLE IF NOT EXISTS categorie (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         nome TEXT UNIQUE NOT NULL CHECK(length(nome) > 0))''')
     cursor.execute('''CREATE TABLE IF NOT EXISTS spese (
@@ -25,7 +26,8 @@ def inizializza_db():
 def gestione_categorie(conn):
     nome = input("Nuova categoria: ").strip()
     try:
-        conn.execute("INSERT INTO categorie (nome) VALUES (?)", (nome,))
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO categorie (nome) VALUES (?)", (nome,))
         conn.commit()
         print("✅ Categoria aggiunta.")
     except: print("❌ Errore: Categoria già esistente o non valida.")
@@ -63,7 +65,6 @@ def definisci_budget(conn):
 def report_confronto_budget(conn):
     cursor = conn.cursor()
     print("\n--- REPORT CONFRONTO BUDGET ---")
-    # Query che unisce budget e spese per il confronto richiesto
     query = '''
         SELECT b.mese, c.nome, b.importo_limite, IFNULL(SUM(s.importo), 0)
         FROM budget b
@@ -93,3 +94,4 @@ def menu():
 
 if __name__ == "__main__":
     menu()
+
