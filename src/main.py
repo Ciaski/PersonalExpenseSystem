@@ -4,7 +4,6 @@ def inizializza_db():
     conn = sqlite3.connect('Spese_Personali.db')
     cursor = conn.cursor()
     cursor.execute("PRAGMA foreign_keys = ON;")
-    # Ho allineato correttamente le righe qui sotto
     cursor.execute('''CREATE TABLE IF NOT EXISTS categorie (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         nome TEXT UNIQUE NOT NULL CHECK(length(nome) > 0))''')
