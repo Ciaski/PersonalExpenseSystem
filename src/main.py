@@ -2,7 +2,6 @@ import sqlite3
 import os
 
 def inizializza_sistema():
-    # Creazione connessione con attivazione vincoli referenziali
     db = sqlite3.connect('Spese_Personali.db')
     cmd = db.cursor()
     cmd.execute("PRAGMA foreign_keys = ON;")
@@ -65,6 +64,30 @@ def registra_transazione(db):
     else:
         print(f"[-] Errore: La categoria '{etichetta_cat}' non esiste. Creala prima.")
 
+def definisci_budget_mensile(db):
+    print("\n--- IMPOSTAZIONE BUDGET ---")
+    periodo = input("Inserisci il mese (AAAA-MM): ")
+    cat_nome = input("Categoria di riferimento: ").strip().capitalize()
+    try:
+        limite = float(input("Inserisci il limite massimo di spesa: "))
+        if limite <= 0:
+            print("[-] Errore: Il budget deve essere maggiore di zero.")
+            return
+        
+        cmd = db.cursor()
+        cmd.execute("SELECT id FROM categorie WHERE nome = ?", (cat_nome,))
+        res = cmd.fetchone()
+        
+        if res:
+            cmd.execute("INSERT OR REPLACE INTO budget_mensile VALUES (?, ?, ?)", 
+                        (periodo, res[0], limite))
+            db.commit()
+            print(f"[+] Budget per {cat_nome} impostato correttamente.")
+        else:
+            print("[-] Errore: Categoria non trovata.")
+    except ValueError:
+        print("[-] Errore: Inserire un numero valido.")
+
 def sottomenu_statistiche(db):
     while True:
         print("\n--- CENTRO ANALISI E REPORT ---")
@@ -117,13 +140,20 @@ def main_app():
         
         scelta = input("\nSeleziona un'opzione: ")
         
-        if scelta == '1': aggiungi_nuova_categoria(connessione)
-        elif scelta == '2': registra_transazione(connessione)
-        elif scelta == '4': sottomenu_statistiche(connessione)
+        if scelta == '1': 
+            aggiungi_nuova_categoria(connessione)
+        elif scelta == '2': 
+            registra_transazione(connessione)
+        elif scelta == '3': 
+            definisci_budget_mensile(connessione) 
+        elif scelta == '4': 
+            sottomenu_statistiche(connessione)
         elif scelta == '5': 
             print("Salvataggio dati in corso... Arrivederci!")
             break
-        else: print("Comando non riconosciuto.")
+        else: 
+            print("Comando non riconosciuto.")
+            
     connessione.close()
 
 if __name__ == "__main__":
