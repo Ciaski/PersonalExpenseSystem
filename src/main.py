@@ -1,95 +1,130 @@
 import sqlite3
+import os
 
-def inizializza_db():
-    conn = sqlite3.connect('Spese_Personali.db')
-    cursor = conn.cursor()
-    cursor.execute("PRAGMA foreign_keys = ON;")
-    cursor.execute('''CREATE TABLE IF NOT EXISTS categorie (
+def inizializza_sistema():
+    # Creazione connessione con attivazione vincoli referenziali
+    db = sqlite3.connect('Spese_Personali.db')
+    cmd = db.cursor()
+    cmd.execute("PRAGMA foreign_keys = ON;")
+    cmd.execute('''CREATE TABLE IF NOT EXISTS categorie (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         nome TEXT UNIQUE NOT NULL CHECK(length(nome) > 0))''')
-    cursor.execute('''CREATE TABLE IF NOT EXISTS spese (
+    cmd.execute('''CREATE TABLE IF NOT EXISTS spese (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        data TEXT NOT NULL,
-                        importo REAL NOT NULL CHECK(importo > 0),
-                        categoria_id INTEGER NOT NULL,
-                        FOREIGN KEY (categoria_id) REFERENCES categorie(id))''')
-    cursor.execute('''CREATE TABLE IF NOT EXISTS budget (
-                        mese TEXT NOT NULL, 
-                        categoria_id INTEGER NOT NULL, 
-                        importo_limite REAL NOT NULL CHECK(importo_limite > 0),
-                        PRIMARY KEY (mese, categoria_id),
-                        FOREIGN KEY (categoria_id) REFERENCES categorie(id))''')
-    conn.commit()
-    return conn
+                        data_spesa TEXT NOT NULL,
+                        cifra REAL NOT NULL CHECK(cifra > 0),
+                        nota TEXT,
+                        cat_id INTEGER NOT NULL,
+                        FOREIGN KEY (cat_id) REFERENCES categorie(id))''')
+    cmd.execute('''CREATE TABLE IF NOT EXISTS budget_mensile (
+                        mese_rif TEXT NOT NULL, 
+                        cat_id INTEGER NOT NULL, 
+                        limite_max REAL NOT NULL CHECK(limite_max > 0),
+                        PRIMARY KEY (mese_rif, cat_id),
+                        FOREIGN KEY (cat_id) REFERENCES categorie(id))''')
+    db.commit()
+    return db
 
-def gestione_categorie(conn):
-    nome = input("Nuova categoria: ").strip()
+def aggiungi_nuova_categoria(db):
+    titolo = input("Inserisci il nome della categoria da creare: ").strip().capitalize()
+    if not titolo:
+        print("[-] Errore: Il nome non può essere vuoto.")
+        return
     try:
-        cursor = conn.cursor()
-        cursor.execute("INSERT INTO categorie (nome) VALUES (?)", (nome,))
-        conn.commit()
-        print("✅ Categoria aggiunta.")
-    except: print("❌ Errore: Categoria già esistente o non valida.")
+        cmd = db.cursor()
+        cmd.execute("INSERT INTO categorie (nome) VALUES (?)", (titolo,))
+        db.commit()
+        print(f"[+] Ottimo! La categoria '{titolo}' è stata salvata.")
+    except sqlite3.IntegrityError:
+        print(f"[-] Attenzione: '{titolo}' è già presente nel sistema.")
 
-def inserisci_spesa(conn):
-    data = input("Data (YYYY-MM-DD): ")
-    cat = input("Nome categoria: ")
+def registra_transazione(db):
+    print("\n--- REGISTRAZIONE NUOVA SPESA ---")
+    data_ins = input("Data dell'operazione (AAAA-MM-GG): ")
     try:
-        imp = float(input("Importo speso: "))
-        cursor = conn.cursor()
-        cursor.execute("SELECT id FROM categorie WHERE nome = ?", (cat,))
-        res = cursor.fetchone()
-        if res:
-            cursor.execute("INSERT INTO spese (data, importo, categoria_id) VALUES (?, ?, ?)", (data, imp, res[0]))
-            conn.commit()
-            print("✅ Spesa registrata.")
-        else: print("❌ Categoria non trovata.")
-    except: print("❌ Errore dati inseriti.")
+        valore = float(input("Importo speso: "))
+        if valore <= 0:
+            print("[-] Errore: L'importo deve essere una cifra positiva.")
+            return
+    except ValueError:
+        print("[-] Errore: Inserire un valore numerico valido.")
+        return
 
-def definisci_budget(conn):
-    mese = input("Mese (YYYY-MM): ")
-    cat = input("Nome categoria: ")
-    try:
-        limite = float(input("Limite di spesa (Budget): "))
-        cursor = conn.cursor()
-        cursor.execute("SELECT id FROM categorie WHERE nome = ?", (cat,))
-        res = cursor.fetchone()
-        if res:
-            cursor.execute("INSERT OR REPLACE INTO budget VALUES (?, ?, ?)", (mese, res[0], limite))
-            conn.commit()
-            print(f"✅ Budget per {cat} impostato a {limite}€.")
-        else: print("❌ Categoria non trovata.")
-    except: print("❌ Errore inserimento budget.")
+    etichetta_cat = input("Categoria di riferimento: ").strip().capitalize()
+    memo = input("Nota aggiuntiva (opzionale): ")
+    
+    cmd = db.cursor()
+    cmd.execute("SELECT id FROM categorie WHERE nome = ?", (etichetta_cat,))
+    record_cat = cmd.fetchone()
+    
+    if record_cat:
+        cmd.execute("INSERT INTO spese (data_spesa, cifra, nota, cat_id) VALUES (?, ?, ?, ?)", 
+                    (data_ins, valore, memo, record_cat[0]))
+        db.commit()
+        print("[OK] Transazione registrata con successo.")
+    else:
+        print(f"[-] Errore: La categoria '{etichetta_cat}' non esiste. Creala prima.")
 
-def report_confronto_budget(conn):
-    cursor = conn.cursor()
-    print("\n--- REPORT CONFRONTO BUDGET ---")
-    query = '''
-        SELECT b.mese, c.nome, b.importo_limite, IFNULL(SUM(s.importo), 0)
-        FROM budget b
-        JOIN categorie c ON b.categoria_id = c.id
-        LEFT JOIN spese s ON c.id = s.categoria_id AND strftime('%Y-%m', s.data) = b.mese
-        GROUP BY b.mese, c.id
-    '''
-    cursor.execute(query)
-    for r in cursor.fetchall():
-        stato = "⚠️ SUPERAMENTO!" if r[3] > r[2] else "✅ OK"
-        print(f"Mese: {r[0]} | Cat: {r[1]} | Budget: {r[2]}€ | Speso: {r[3]}€ | {stato}")
-
-def menu():
-    conn = inizializza_db()
-    print("*" * 40)
-    print("  BENVENUTO NEL SISTEMA SPESE PERSONALI  ")
-    print("*" * 40)
+def sottomenu_statistiche(db):
     while True:
-        print("\n1. Gestione Categorie\n2. Inserisci Spesa\n3. Definisci Budget\n4. Report Budget vs Spese\n5. Esci")
-        scelta = input("Scegli un'opzione: ")
-        if scelta == '1': gestione_categorie(conn)
-        elif scelta == '2': inserisci_spesa(conn)
-        elif scelta == '3': definisci_budget(conn)
-        elif scelta == '4': report_confronto_budget(conn)
-        elif scelta == '5': break
-    conn.close()
+        print("\n--- CENTRO ANALISI E REPORT ---")
+        print("1. Riepilogo totale per ogni categoria")
+        print("2. Confronto Spese vs Budget Mensile")
+        print("3. Storico completo movimenti")
+        print("4. Torna al menù principale")
+        
+        scelta_rep = input("\nQuale analisi vuoi visualizzare? ")
+        cmd = db.cursor()
+
+        if scelta_rep == '1':
+            cmd.execute('''SELECT c.nome, SUM(s.cifra) FROM spese s 
+                           JOIN categorie c ON s.cat_id = c.id GROUP BY c.id''')
+            print("\n{:<20} {:>12}".format("CATEGORIA", "TOTALE SPESO"))
+            print("-" * 35)
+            for r in cmd.fetchall(): print("{:<20} {:>10.2f}€".format(r[0], r[1]))
+
+        elif scelta_rep == '2':
+            cmd.execute('''SELECT b.mese_rif, c.nome, b.limite_max, IFNULL(SUM(s.cifra), 0)
+                           FROM budget_mensile b JOIN categorie c ON b.cat_id = c.id
+                           LEFT JOIN spese s ON c.id = s.cat_id AND strftime('%Y-%m', s.data_spesa) = b.mese_rif
+                           GROUP BY b.mese_rif, c.id''')
+            print("\nANALISI BUDGET:")
+            for r in cmd.fetchall():
+                alert = "!! SFORATO !!" if r[3] > r[2] else "In linea"
+                print(f"[{r[0]}] {r[1]}: Spesi {r[3]}€ su {r[2]}€ ({alert})")
+
+        elif scelta_rep == '3':
+            cmd.execute('''SELECT s.data_spesa, c.nome, s.cifra, s.nota FROM spese s 
+                           JOIN categorie c ON s.cat_id = c.id ORDER BY s.data_spesa DESC''')
+            print("\n{:<12} | {:<15} | {:>8} | {:<20}".format("DATA", "CAT.", "EURO", "NOTE"))
+            print("-" * 65)
+            for r in cmd.fetchall(): print("{:<12} | {:<15} | {:>8.2f} | {:<20}".format(r[0], r[1], r[2], r[3] or ""))
+
+        elif scelta_rep == '4': break
+        else: print("Scelta non valida, riprova.")
+
+def main_app():
+    connessione = inizializza_sistema()
+    while True:
+        print("\n==========================================")
+        print("     WALLET MANAGER - GESTIONE SPESE      ")
+        print("==========================================")
+        print("1. Gestisci Categorie")
+        print("2. Registra una Spesa")
+        print("3. Imposta Budget Mensile")
+        print("4. Visualizza Statistiche e Report")
+        print("5. Esci dall'applicazione")
+        
+        scelta = input("\nSeleziona un'opzione: ")
+        
+        if scelta == '1': aggiungi_nuova_categoria(connessione)
+        elif scelta == '2': registra_transazione(connessione)
+        elif scelta == '4': sottomenu_statistiche(connessione)
+        elif scelta == '5': 
+            print("Salvataggio dati in corso... Arrivederci!")
+            break
+        else: print("Comando non riconosciuto.")
+    connessione.close()
 
 if __name__ == "__main__":
-    menu()
+    main_app()
