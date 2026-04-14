@@ -21,3 +21,6 @@ il sistema è in grado di confrontare budget\spesa se eventualmente si supera il
 3. Apri il terminale (o prompt dei comandi) nella cartella principale del progetto.
 4. Esegui il programma con il comando:
    python src/main.py
+## Demo Video
+Puoi visualizzare il video dimostrativo del funzionamento cliccando qui: 
+[Guarda il Video](./Demo/Video%20Spese%20Personali%20(1).mp4)
