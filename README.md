@@ -9,6 +9,7 @@ Questo progetto è un sistema software sviluppato per l'esame finale di Programm
 * **Librerie standard:** `sqlite3`, `datetime`
 
 ##  Struttura del Progetto
+il sistema è in grado di confrontare budget\spesa se evenutalmente si supera il budget indica il superamento
 * **src/:** Contiene il codice sorgente Python (`main.py`).
 * **sql/:** Script SQL integrale per la creazione delle tabelle, vincoli e dati di esempio.
 * **Demo/:** Video dimostrativo (.mp4) che mostra l'avvio, l'uso dei menu e la generazione dei report.
