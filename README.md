@@ -1,7 +1,4 @@
-PersonalExpenseSystem
-Sistema Gestione delle Spese Personali e del Budget
-Questo progetto è un sistema software sviluppato per l'esame finale di Programmazione. L'obiettivo è integrare un linguaggio di programmazione (Python) con un database relazionale (SQLite) per monitorare le finanze personali tramite un'interfaccia testuale (console).
- Requisiti Tecnici
+Requisiti Tecnici
 Linguaggio: Python 3.x
 Database: SQLite3 (con vincoli di integrità attivi)
 Librerie standard: sqlite3, datetime
@@ -14,3 +11,5 @@ README.md: Istruzioni e documentazione del progetto.
 Assicurati di avere Python installato sul tuo sistema.
 Clona il repository o scarica i file in una cartella locale.
 Apri il terminale (o prompt dei comandi) nella cartella principale del progetto.
+Esegui il programma con il comando:
+python src/main.py
