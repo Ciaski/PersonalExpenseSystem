@@ -84,7 +84,7 @@ def definisci_budget_mensile(db):
 
 def sottomenu_statistiche(db):
     while True:
-        print("\nMenu dei Report") # Obbligatorio Pag. 5
+        print("\nMenu dei Report")
         print("1. Totale spese per categoria")
         print("2. Spese mensili vs budget")
         print("3. Elenco completo delle spese ordinate per data")
